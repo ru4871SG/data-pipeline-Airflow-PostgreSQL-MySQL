@@ -35,6 +35,10 @@ The `transaction_data` folder contains the CSV file which should be used to fill
 
 7. Once you are done with all the 6 steps above, you can then place the Airflow DAG script `data_transfer_airflow.py` into the "dags" subfolder of your Airflow folder. Make sure to change the sys.path to the folder where you store the other Python scripts locally (`data_transfer_from_mysql.py` and `data_transfer_from_staging.py`). Also, if the DAG script file has permission issues (after you move it), you have to change its permission with `sudo chmod 777 data_transfer_airflow.py`
 
-8. If you see no issues with the DAG script file in Airflow, you can simply unpause it with the command `airflow dags unpause data_transfer_airflow`. You can also unpause the DAG directly using the Airflow UI. Make sure both the Airflow server and scheduler are running properly. That's it! Every 3 minutes you will see 100 new records being transferred from MySQL to the staging area database in PostgreSQL, and then 100 records will also be transferred from the staging area into the production warehouse inside PostgreSQL itself. 
+8. If you see no issues with the DAG script file in Airflow, you can simply unpause it with the command `airflow dags unpause data_transfer_airflow`. You can also unpause the DAG directly using the Airflow UI. Make sure both the Airflow server and scheduler are running properly. That's it! Every 3 minutes you will see 100 new records being transferred from MySQL to the staging area database in PostgreSQL, and then 100 records will also be transferred from the staging area into the production data warehouse inside PostgreSQL itself. 
 
 Everything is automated once the DAG is up and running! If you want to speed up the data transfer process, feel free to edit the schedule interval in the airflow DAG script. You can also increase the transfer limit (from 100 records) inside `data_transfer_from_mysql.py` and `data_transfer_from_staging.py`
+
+The final ERD design in your production data warehouse should look like the below image:
+
+![Snowflake Schema](snowflake_schema_erd.png)
