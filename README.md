@@ -1,4 +1,4 @@
-# Automated Data Pipeline Using Airflow
+# Automated Data Pipeline Using Airflow (with PostgreSQL and MySQL)
 
 This repository contains multiple scripts that you can use to automate data transfer from MySQL to your data warehouse in PostgreSQL. I include the Airflow DAG script here `data_transfer_airflow.py`, which you can use in Airflow to automate the other two scripts: `data_transfer_from_mysql.py` (to transfer data from MySQL to Staging Area database in PostgreSQL), and `data_transfer_from_staging.py` (to transfer data from the Staging Area to the Production data warehouse in PostgreSQL).
 
