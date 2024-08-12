@@ -38,13 +38,13 @@ The `transaction_data` folder contains the CSV file which should be used to fill
 
 6. Next, create the production database in Amazon Aurora PostgreSQL, and execute the script `create_snowflake_schema_postgres_aurora.py`, which will create your tables in a snowflake schema. And just like step 2 and 5 above, you should also include your Amazon Aurora database details in your .env file.
 
-For 'target_db_host_aurora', you should be able to find the IP address easily by using the ping command to your Aurora cluster endpoint in terminal. Also, don't forget to edit the inbound rules of the security group associated with your Aurora database instance to allow incoming connections from the script's source. This ensures you won't have any connection issues when the script attempts to connect to Aurora.
+    For 'target_db_host_aurora', you should be able to find the IP address easily by using the ping command to your Aurora cluster endpoint in terminal. Also, don't forget to edit the inbound rules of the security group associated with your Aurora database instance to allow incoming connections from the script's source. This ensures you won't have any connection issues when the script attempts to connect to Aurora.
 
-If you don't want to use Amazon Aurora, you can simply create your production database in local PostgreSQL, and execute `05_create_snowflake_schema_postgres.sql` instead.
+    If you don't want to use Amazon Aurora, you can simply create your production database in local PostgreSQL, and execute `05_create_snowflake_schema_postgres.sql` instead.
 
 7. Once you are done with all the 6 steps above, you can then place the Airflow DAG script `data_transfer_airflow.py` into the "dags" subfolder of your Airflow folder. Make sure to change the sys.path to the folder where you store the other Python scripts (`data_transfer_from_mysql.py` and `data_transfer_from_staging_to_aurora.py`). Also, if the DAG script file has permission issues (after you move it), you have to change its permission with `sudo chmod 777 data_transfer_airflow.py`
 
-If you don't use Amazon Aurora, you can change all mentions of 'data_transfer_from_staging_to_aurora' to 'data_transfer_from_staging' in the Airflow DAG script.
+    If you don't use Amazon Aurora, you can change all mentions of 'data_transfer_from_staging_to_aurora' to 'data_transfer_from_staging' in the Airflow DAG script.
 
 8. If you see no issues with the DAG script file in Airflow, you can simply unpause it with the command `airflow dags unpause data_transfer_airflow`. You can also unpause the DAG directly using the Airflow UI. Make sure both the Airflow server and scheduler are running properly. That's it! Every 3 minutes you will see 100 new records being transferred from MySQL to the staging area database in PostgreSQL, and then 100 records will also be transferred from the staging area into the production database inside PostgreSQL. 
 
