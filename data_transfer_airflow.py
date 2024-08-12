@@ -1,12 +1,12 @@
 """
-Airflow DAG script to automate data transfer process from MySQL to Staging Area in PostgreSQL, then to Production.
+Airflow DAG script to automate data transfer process from MySQL to Staging Area in PostgreSQL, then to Production in Amazon Aurora.
 """
 
 # Libraries
 import sys
 # You must change the below path to the folder where you store the Python scripts locally
-# (data_transfer_from_mysql.py and data_transfer_from_staging.py)
-sys.path.insert(0, '/home/ruddy/Documents/GitHub/automated-data-pipeline-airflow')
+# (data_transfer_from_mysql.py and data_transfer_from_staging_to_aurora.py)
+sys.path.insert(0, '/home/ruddy/Documents/GitHub/data-pipeline-Airflow-PostgreSQL-MySQL')
 
 from datetime import timedelta
 from airflow import DAG
@@ -14,7 +14,7 @@ from airflow.operators.python_operator import PythonOperator
 from airflow.utils.dates import days_ago
 
 import data_transfer_from_mysql
-import data_transfer_from_staging
+import data_transfer_from_staging_to_aurora
 
 # DAG arguments
 default_args = {
@@ -31,7 +31,7 @@ default_args = {
 dag = DAG(
     'data_transfer_airflow',
     default_args=default_args,
-    description='Data Transfer Process (100 records at a time) from MySQL to Staging Area in PostgreSQL, then to Production',
+    description='Data Transfer Process (100 records at a time) from MySQL to Staging Area in PostgreSQL, then to Production in Amazon Aurora',
     schedule_interval=timedelta(minutes=3),
     catchup=False,
 )
@@ -43,10 +43,10 @@ task1 = PythonOperator(
     dag=dag,
 )
 
-# Task to transfer data from staging to production
+# Task to transfer data from staging to production in Amazon Aurora
 task2 = PythonOperator(
     task_id='data_transfer_from_staging_to_production',
-    python_callable=data_transfer_from_staging.main,
+    python_callable=data_transfer_from_staging_to_aurora.main,
     dag=dag,
 )
 
