@@ -4,14 +4,18 @@ Airflow DAG script to automate data transfer process from MySQL to Staging Area 
 
 # Libraries
 import sys
-# You must change the below path to the folder where you store the Python scripts locally
-# (data_transfer_from_mysql.py and data_transfer_from_staging_to_aurora.py)
-sys.path.insert(0, '/home/ruddy/Documents/GitHub/data-pipeline-Airflow-PostgreSQL-MySQL')
+import os
 
-from datetime import timedelta
+# You must change the below path to the folder where you store the Python data transfer scripts
+# For this repository, the path points to the parent directory of this file, since that's where we store the data transfer scripts
+parent_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, parent_dir)
+
 from airflow import DAG
 from airflow.operators.python_operator import PythonOperator
 from airflow.utils.dates import days_ago
+
+from datetime import timedelta
 
 import data_transfer_from_mysql
 import data_transfer_from_staging_to_aurora
@@ -23,16 +27,19 @@ default_args = {
     'email': ['admin@example.com'],
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retries': 2,
+    'retry_delay': timedelta(minutes=4),
 }
+# Note: for start_date, per my experience, using fixed schedule with datetime.datetime() is much more organized, but this example uses the default
+#  start_date=days_ago(0)
 
-# DAG definition with 3 minutes interval
+
+# DAG definition with 5 minutes interval
 dag = DAG(
-    'data_transfer_airflow',
+    'airflow_data_transfer',
     default_args=default_args,
     description='Data Transfer Process (100 records at a time) from MySQL to Staging Area in PostgreSQL, then to Production in Amazon Aurora',
-    schedule_interval=timedelta(minutes=3),
+    schedule_interval=timedelta(minutes=5),
     catchup=False,
 )
 
