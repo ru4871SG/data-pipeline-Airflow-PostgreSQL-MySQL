@@ -39,4 +39,4 @@ CREATE TABLE IF NOT EXISTS transaction_data (
     month_name VARCHAR(10),
     year_id INT,
     date_id INT
-);
+) ENGINE=InnoDB CHARSET=utf8 COLLATE=utf8_unicode_ci;

@@ -18,7 +18,7 @@ from airflow.utils.dates import days_ago
 from datetime import timedelta
 
 import data_transfer_from_mysql
-import data_transfer_from_staging_to_aurora
+import etl_from_staging_to_aurora
 
 # DAG arguments
 default_args = {
@@ -36,7 +36,7 @@ default_args = {
 
 # DAG definition with 5 minutes interval
 dag = DAG(
-    'airflow_data_transfer',
+    'airflow_data_transfer_original',
     default_args=default_args,
     description='Data Transfer Process (100 records at a time) from MySQL to Staging Area in PostgreSQL, then to Production in Amazon Aurora',
     schedule_interval=timedelta(minutes=5),
@@ -50,10 +50,10 @@ task1 = PythonOperator(
     dag=dag,
 )
 
-# Task to transfer data from staging to production in Amazon Aurora
+# Task to transfer data from staging in local PostgreSQL to production in Amazon Aurora
 task2 = PythonOperator(
     task_id='data_transfer_from_staging_to_production',
-    python_callable=data_transfer_from_staging_to_aurora.main,
+    python_callable=etl_from_staging_to_aurora.main,
     dag=dag,
 )
 
