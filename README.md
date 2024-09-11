@@ -1,12 +1,12 @@
 # Data Pipeline Using Airflow, PostgreSQL (with Amazon Aurora), and MySQL
 
-This repository contains multiple scripts that you can use to automate data transfer from MySQL to your production database in Postgres. I include the Airflow DAG script here `airflow_data_transfer_automatic_runs.py` (located inside the `dags` folder), which you can use in Airflow to automate the other two scripts: `data_transfer_from_mysql.py` (to transfer data from MySQL to Staging Area database in Postgres), and `etl_from_staging_to_aurora.py` (to transfer data from Staging Area to Amazon Aurora PostgreSQL, with extra PII masking in the middle of the process).
+This repository contains multiple scripts that you can use to automate data transfer and transformation from MySQL to your production database in Postgres. I include the Airflow DAG script here `airflow_data_transfer_automatic_runs.py` (located inside the `dags` folder), which you can use in Airflow to automate the other two scripts: `data_transfer_from_mysql.py` (to transfer data from MySQL to Staging Area database in Postgres), and `etl_from_staging_to_aurora.py` (to transfer data from Staging Area to Amazon Aurora PostgreSQL, with extra PII masking in the middle of the process).
 
 For this repository, I use the classic approach, with the utilization of .env file for local environment settings. In actual production, you may want to configure your database credentials inside Airflow Connections directly.
 
 The repository also include multiple SQL scripts that you should execute manually before running the Airflow DAG script. The original data is also included in a CSV format inside the `transaction_data` folder.
 
-**Note:** If you don't want to use Amazon Aurora, you can store the data in local Postgres. Use my standard script `etl_from_staging.py` instead of `etl_from_staging_to_aurora.py`.
+**Note:** If you don't want to use Amazon Aurora, you can store the data in local Postgres. For this, use my standard script `etl_from_staging.py` instead of `etl_from_staging_to_aurora.py`.
 
 The two scripts (`etl_from_staging.py` and `etl_from_staging_to_aurora.py`) are very similar, but I put `sslmode='require'` for Amazon Aurora connection to enforce encryption.
 
@@ -22,8 +22,8 @@ The project is structured as follows:
 - `data_transfer_from_mysql.py`: Python script to transfer data from MySQL to staging area in local Postgres.
 - `etl_from_staging.py`: Python script to transfer data from the staging area into the production database in local Postgres.
 - `etl_from_staging_to_aurora.py`: Very similar to `etl_from_staging.py` but the data will be saved to Amazon Aurora Postgres.
-- `check_mysql.py`: Python script to check the first five rows in the MySQL table.
-- `airflow_data_transfer_automatic_runs.py`: Located inside the `dags` folder, this is the Airflow DAG script to automate the data pipeline using Airflow.
+- `check_mysql.py`: Python script to check the first five rows in the MySQL table. It's only triggered once in the first Airflow DAG run if you use `airflow_data_transfer_automatic_runs.py`.
+- `airflow_data_transfer_automatic_runs.py`: Located inside the `dags` folder, this is the Airflow DAG script to automate the data pipeline using Airflow. This script will automatically re-execute the DAG after it finishes every single time.
 - `airflow_data_transfer_original.py`: Also located inside the `dags` folder, this is the original Airflow DAG script, where you will run the tasks with manual time intervals (without automatic runs).
 
 The `transaction_data` folder contains the CSV file which should be used to fill the table in your MySQL database.
