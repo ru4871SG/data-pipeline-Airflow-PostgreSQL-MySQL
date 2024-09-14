@@ -52,7 +52,7 @@ The `transaction_data` folder contains the CSV file which should be used to fill
 
 8. If you see no issues with the DAG script file in Airflow, you can simply unpause it with the command `airflow dags unpause airflow_data_transfer_automatic_runs`. You can also trigger the DAG directly using the Airflow UI. Make sure both the Airflow server and scheduler are running properly. That's it! 
 
-Everything is automated once the DAG is up and running! If you want to speed up the data transfer process, feel free to increase the transfer limit (from 100 records) inside `data_transfer_from_mysql.py` and `etl_from_staging_to_aurora.py` (or `etl_from_staging.py`)
+Everything is automated once the DAG is up and running! If you want to speed up the data transfer process, feel free to increase the limit inside `data_transfer_from_mysql.py` and `etl_from_staging_to_aurora.py` (or `etl_from_staging.py`)
 
 The final ERD design in your production database should look like the below image:
 

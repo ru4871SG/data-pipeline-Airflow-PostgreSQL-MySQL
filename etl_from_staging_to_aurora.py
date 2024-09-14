@@ -3,9 +3,11 @@ ETL Process from Staging Area to Target Database in PostgreSQL (Amazon Aurora)
 """
 
 # Libraries
-from dotenv import load_dotenv
 import psycopg2
 import os
+
+from dotenv import load_dotenv
+from psycopg2 import extras
 
 # Function to get the latest records from the table in staging area db
 def get_latest_records(staging_db_name, staging_db_user, staging_db_password, staging_db_host, staging_db_port,
@@ -41,10 +43,10 @@ def get_latest_records(staging_db_name, staging_db_user, staging_db_password, st
 
         # Fetch 100 latest records from staging area db, by excluding existing transaction_id values in target db
         if existing_transaction_id:
-            query = "SELECT * FROM staging WHERE transaction_id NOT IN %s LIMIT 100"
+            query = "SELECT * FROM staging WHERE transaction_id NOT IN %s LIMIT 20000"
             staging_cursor.execute(query, (tuple(existing_transaction_id),))
         else:
-            query = "SELECT * FROM staging LIMIT 100"
+            query = "SELECT * FROM staging LIMIT 20000"
             staging_cursor.execute(query)
 
         records = staging_cursor.fetchall()
@@ -96,8 +98,8 @@ def pii_masking(records, columns):
     return masked_records
 
 
-# Function to insert the latest records into the target db in Amazon Aurora
-def insert_records(records, columns, target_db_name, target_db_user, target_db_password, target_db_host, target_db_port):
+# Function to insert the latest records into the target db in Amazon Aurora with chunk size of 1000
+def insert_records(records, columns, target_db_name, target_db_user, target_db_password, target_db_host, target_db_port, chunk_size=1000):
     total_inserted = 0
     try:
         connection = psycopg2.connect(
@@ -105,8 +107,7 @@ def insert_records(records, columns, target_db_name, target_db_user, target_db_p
             user=target_db_user,
             password=target_db_password,
             host=target_db_host,
-            port=target_db_port,
-            sslmode='require'
+            port=target_db_port
         )
         cursor = connection.cursor()
 
@@ -147,7 +148,7 @@ def insert_records(records, columns, target_db_name, target_db_user, target_db_p
             VALUES (%s, %s)
             ON CONFLICT (year_id) DO NOTHING
             RETURNING year_id
-            """,
+            """
         }
 
         # Insert queries for dimension tables and fact table
@@ -190,64 +191,43 @@ def insert_records(records, columns, target_db_name, target_db_user, target_db_p
             """
         }
 
+        # Function to process chunks
+        def process_chunks(data, query):
+            nonlocal total_inserted
+            for i in range(0, len(data), chunk_size):
+                chunk = data[i:i + chunk_size]
+                extras.execute_batch(cursor, query, chunk)
+                total_inserted += len(chunk)
+                connection.commit()
+
+        # Prepare data for sub-dimension tables
+        sub_dim_data = {
+            "dim_customer_gender": [(r[columns.index('customer_gender_id')], r[columns.index('gender_desc')]) for r in records],
+            "dim_product_type": [(r[columns.index('product_type_id')], r[columns.index('product_type')], r[columns.index('product_category')]) for r in records],
+            "dim_sales_outlet_city": [(r[columns.index('city_id')], r[columns.index('outlet_city')]) for r in records],
+            "dim_day_of_week": [(r[columns.index('day_of_week_id')], r[columns.index('day_of_week')]) for r in records],
+            "dim_month": [(r[columns.index('month_id')], r[columns.index('month_name')]) for r in records],
+            "dim_year": [(r[columns.index('year_id')], r[columns.index('year')]) for r in records]
+        }
+
         # Insert records into sub-dimension tables
-        for record in records:
-            cursor.execute(sub_dim_insert_queries["dim_customer_gender"], (
-                record[columns.index('customer_gender_id')], record[columns.index('gender_desc')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(sub_dim_insert_queries["dim_product_type"], (
-                record[columns.index('product_type_id')], record[columns.index('product_type')], record[columns.index('product_category')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(sub_dim_insert_queries["dim_sales_outlet_city"], (
-                record[columns.index('city_id')], record[columns.index('outlet_city')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(sub_dim_insert_queries["dim_day_of_week"], (
-                record[columns.index('day_of_week_id')], record[columns.index('day_of_week')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(sub_dim_insert_queries["dim_month"], (
-                record[columns.index('month_id')], record[columns.index('month_name')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(sub_dim_insert_queries["dim_year"], (
-                record[columns.index('year_id')], record[columns.index('year')]
-            ))
-            total_inserted += cursor.rowcount
+        for table, data in sub_dim_data.items():
+            process_chunks(data, sub_dim_insert_queries[table])
 
-        # Insert records into dimension tables
-        for record in records:
-            cursor.execute(dim_insert_queries["dim_customer"], (
-                record[columns.index('customer_id')], record[columns.index('customer_name')], record[columns.index('customer_email')], record[columns.index('card_number')], record[columns.index('customer_gender_id')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(dim_insert_queries["dim_product"], (
-                record[columns.index('product_id')], record[columns.index('product_name')], record[columns.index('description')], record[columns.index('product_price')], record[columns.index('product_type_id')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(dim_insert_queries["dim_sales_outlet"], (
-                record[columns.index('sales_outlet_id')], record[columns.index('sales_outlet_type')], record[columns.index('outlet_address')], record[columns.index('city_id')], record[columns.index('outlet_telephone')], record[columns.index('outlet_postal_code')], record[columns.index('outlet_manager')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(dim_insert_queries["dim_staff"], (
-                record[columns.index('staff_id')], record[columns.index('staff_first_name')], record[columns.index('staff_last_name')], record[columns.index('staff_position')], record[columns.index('staff_location')]
-            ))
-            total_inserted += cursor.rowcount
-            cursor.execute(dim_insert_queries["dim_date"], (
-                record[columns.index('date_id')], record[columns.index('transaction_date')], record[columns.index('day_of_week_id')], record[columns.index('month_id')], record[columns.index('year_id')]
-            ))
-            total_inserted += cursor.rowcount
+        # Prepare data for dimension tables and fact table
+        dim_data = {
+            "dim_customer": [(r[columns.index('customer_id')], r[columns.index('customer_name')], r[columns.index('customer_email')], r[columns.index('card_number')], r[columns.index('customer_gender_id')]) for r in records],
+            "dim_product": [(r[columns.index('product_id')], r[columns.index('product_name')], r[columns.index('description')], r[columns.index('product_price')], r[columns.index('product_type_id')]) for r in records],
+            "dim_sales_outlet": [(r[columns.index('sales_outlet_id')], r[columns.index('sales_outlet_type')], r[columns.index('outlet_address')], r[columns.index('city_id')], r[columns.index('outlet_telephone')], r[columns.index('outlet_postal_code')], r[columns.index('outlet_manager')]) for r in records],
+            "dim_staff": [(r[columns.index('staff_id')], r[columns.index('staff_first_name')], r[columns.index('staff_last_name')], r[columns.index('staff_position')], r[columns.index('staff_location')]) for r in records],
+            "dim_date": [(r[columns.index('date_id')], r[columns.index('transaction_date')], r[columns.index('day_of_week_id')], r[columns.index('month_id')], r[columns.index('year_id')]) for r in records],
+            "fact_sales": [(r[columns.index('transaction_id')], r[columns.index('date_id')], r[columns.index('sales_outlet_id')], r[columns.index('staff_id')], r[columns.index('product_id')], r[columns.index('customer_id')], r[columns.index('quantity')], r[columns.index('price')]) for r in records]
+        }
 
-        # Insert records into the fact table
-        for record in records:
-            cursor.execute(dim_insert_queries["fact_sales"], (
-                record[columns.index('transaction_id')], record[columns.index('date_id')], record[columns.index('sales_outlet_id')], record[columns.index('staff_id')], record[columns.index('product_id')], record[columns.index('customer_id')], record[columns.index('quantity')], record[columns.index('price')]
-            ))
-            total_inserted += cursor.rowcount
+        # Insert records into dimension tables and fact table
+        for table, data in dim_data.items():
+            process_chunks(data, dim_insert_queries[table])
 
-        connection.commit()
         print(f"Inserted {total_inserted} new records.")
 
         cursor.close()
@@ -255,6 +235,7 @@ def insert_records(records, columns, target_db_name, target_db_user, target_db_p
 
     except (Exception, psycopg2.DatabaseError) as error:
         print("Error while inserting data", error)
+
 
 # Main function
 def main():

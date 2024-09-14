@@ -38,7 +38,7 @@ default_args = {
 dag = DAG(
     'airflow_data_transfer_original',
     default_args=default_args,
-    description='Data Transfer Process (100 records at a time) from MySQL to Staging Area in PostgreSQL, then to Production in Amazon Aurora',
+    description='Data Transfer Process from MySQL to Staging Area in PostgreSQL, then to Production in Amazon Aurora',
     schedule_interval=timedelta(minutes=5),
     catchup=False,
 )
