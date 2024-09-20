@@ -33,7 +33,7 @@ The `transaction_data` folder contains the CSV file which should be used to fill
 When you use the main Airflow DAG script (`airflow_data_transfer_automatic_runs.py`), the DAG graph should look like the below image:
 ![Airflow DAG graph](airflow_dag_graph.png)
 
-When you run this DAG for the first time, Airflow will take the path of `check_mysql`, which will check the first five rows in the MySQL table. Once the DAG has been executed, it will automatically re-execute the DAG from the beginning, but it will choose the path of `skip_check_mysql` instead. I designed the DAG to have branches like this simply to showcase my skills in the DAG creation process.
+When you run this DAG for the first time, Airflow will take the path of `check_mysql`, which will check the first five rows in the MySQL table. After the DAG is executed, it will automatically re-execute the DAG from the beginning, but it will choose the path of `skip_check_mysql` instead. I designed the DAG to have branches like this simply to showcase my skills in the DAG creation process. Basically, `check_mysql` will be executed once, and skipped for the rest of the DAG runs.
 
 ## How to Use
 
