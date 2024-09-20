@@ -49,14 +49,14 @@ dag = DAG(
 )
 
 
-# Function to check if it's the first run
+# Function to check if it's the first DAG run
 def check_first_run(**context):
     dag_id = context['dag'].dag_id
     dag_runs = DagRun.find(dag_id=dag_id, state=State.SUCCESS)
     
-    if len(dag_runs) == 0:  # If there are no successful runs, this is the first run
+    if len(dag_runs) == 0:  # If there are no successful runs, this is considered the first run
         return 'check_mysql'
-    return 'run_both_tasks'
+    return 'skip_check_mysql'
 
 
 # Function to wait for 60 seconds before triggering the next run
@@ -76,7 +76,7 @@ branch_op = BranchPythonOperator(
 )
 
 
-# Task to check the first 5 rows in MySQL (task0)
+# Task to check the first 5 rows in MySQL (task0) - triggered only if it's the first run
 task0 = PythonOperator(
     task_id='check_mysql',
     python_callable=check_mysql.main,
@@ -97,9 +97,9 @@ task2 = PythonOperator(
     dag=dag,
 )
 
-# Dummy operator to run both task1 and task2 directly
-run_both_tasks = DummyOperator(
-    task_id='run_both_tasks',
+# Dummy operator to be triggered when it's not the first run (skip the check_mysql task)
+skip_check_mysql = DummyOperator(
+    task_id='skip_check_mysql',
     dag=dag,
 )
 
@@ -125,7 +125,7 @@ join = DummyOperator(
 )
 
 # Modify the task dependencies based on the different branches
-branch_op >> [task0, run_both_tasks]
+branch_op >> [task0, skip_check_mysql]
 task0 >> join
-run_both_tasks >> join
+skip_check_mysql >> join
 join >> task1 >> task2 >> wait_task >> trigger_next_run

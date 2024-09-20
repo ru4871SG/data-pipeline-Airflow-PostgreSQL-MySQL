@@ -22,11 +22,18 @@ The project is structured as follows:
 - `data_transfer_from_mysql.py`: Python script to transfer data from MySQL to staging area in local Postgres.
 - `etl_from_staging.py`: Python script to transfer data from the staging area into the production database in local Postgres.
 - `etl_from_staging_to_aurora.py`: Very similar to `etl_from_staging.py` but the data will be saved to Amazon Aurora Postgres.
-- `check_mysql.py`: Python script to check the first five rows in the MySQL table. It's only triggered once in the first Airflow DAG run if you use `airflow_data_transfer_automatic_runs.py`.
+- `check_mysql.py`: Python script to check the first five rows in the MySQL table. It will be triggered only once (the first Airflow DAG run) if you use `airflow_data_transfer_automatic_runs.py`.
 - `airflow_data_transfer_automatic_runs.py`: Located inside the `dags` folder, this is the Airflow DAG script to automate the data pipeline using Airflow. This script will automatically re-execute the DAG after it finishes every single time.
 - `airflow_data_transfer_original.py`: Also located inside the `dags` folder, this is the original Airflow DAG script, where you will run the tasks with manual time intervals (without automatic runs).
 
 The `transaction_data` folder contains the CSV file which should be used to fill the table in your MySQL database.
+
+## Airflow DAG
+
+When you use the main Airflow DAG script (`airflow_data_transfer_automatic_runs.py`), the DAG graph should look like the below image:
+![Airflow DAG graph](airflow_dag_graph.png)
+
+When you run this DAG for the first time, Airflow will take the path of `check_mysql`, which will check the first five rows in the MySQL table. Once the DAG has been executed, it will automatically re-execute the DAG from the beginning, but it will choose the path of `skip_check_mysql` instead. I designed the DAG to have branches like this simply to showcase my skills in the DAG creation process.
 
 ## How to Use
 
