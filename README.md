@@ -22,7 +22,7 @@ The project is structured as follows:
 - `data_transfer_from_mysql.py`: Python script to transfer data from MySQL to staging area in local Postgres.
 - `etl_from_staging.py`: Python script to transfer data from the staging area into the production database in local Postgres.
 - `etl_from_staging_to_aurora.py`: Very similar to `etl_from_staging.py` but the data will be saved to Amazon Aurora Postgres.
-- `check_mysql.py`: Python script to check the first five rows in the MySQL table. It will be triggered only once (the first Airflow DAG run) if you use `airflow_data_transfer_automatic_runs.py`.
+- `check_mysql.py`: Python script to check if the MySQL table exists and return its first five rows. It will be triggered only once (the first Airflow DAG run) if you use `airflow_data_transfer_automatic_runs.py`.
 - `airflow_data_transfer_automatic_runs.py`: Located inside the `dags` folder, this is the Airflow DAG script to automate the data pipeline using Airflow. This script will automatically re-execute the DAG after it finishes every single time.
 - `airflow_data_transfer_original.py`: Also located inside the `dags` folder, this is the original Airflow DAG script, where you will run the tasks with manual time intervals (without automatic runs).
 
@@ -33,7 +33,11 @@ The `transaction_data` folder contains the CSV file which should be used to fill
 When you use the main Airflow DAG script (`airflow_data_transfer_automatic_runs.py`), the DAG graph should look like the below image:
 ![Airflow DAG graph](airflow_dag_graph.png)
 
-When you run this DAG for the first time, Airflow will take the path of `check_mysql`, which will check the first five rows in the MySQL table. After the DAG is executed, it will automatically re-execute the DAG from the beginning, but it will choose the path of `skip_check_mysql` instead. I designed the DAG to have branches like this simply to showcase my skills in the DAG creation process. Basically, `check_mysql` will be executed once, and skipped for the rest of the DAG runs.
+If you run this DAG for the first time, Airflow will take the path of `check_mysql`, which will check the existence of the MySQL table and its first five rows. When the check is successful, the DAG will proceed to complete the rest of the tasks in the chain. After all the tasks are successfully completed, it will automatically re-execute the DAG from the beginning, but it will choose the path of `skip_check_mysql` instead of `check_mysql`.
+
+However, if the `check_mysql` task fails (which means you do not have the MySQL table in your database, or if the MySQL table is empty), the DAG will retry the task twice before failing the entire DAG run. If this happens, you need to investigate your MySQL table in your database.
+
+I designed the DAG to have branches like this simply to showcase my skills in the DAG creation process. Basically, `check_mysql` will be executed once, and skipped for the rest of the DAG runs.
 
 ## How to Use
 
